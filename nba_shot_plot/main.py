@@ -4,10 +4,9 @@ import seaborn as sns
 import plotly.graph_objs as go
 import streamlit as st
 from static.players import players
+from static.seasons import seasons_dict
 from static.teams import teams_dict
 from PIL import Image
-
-
 
 def side_bar():
 	player_dict = (players["names"])
@@ -15,7 +14,7 @@ def side_bar():
 	for p in player_dict:
 		player_list.append(p['name'])
 
-	year = st.sidebar.selectbox("Pick Year", options=["","2020-21","2019-20","2018-19","2017-18","2016-17","2015-16","2014-15","2013-14","2012-13","2011-12","2010-11","2009-10","2008-09","2007-08","2006-07", "2005-06", "2004-05", "2003-04", "2002-03", "2001-02", "2000-01", "1999-00"])
+	year = st.sidebar.selectbox("Pick Year", options=seasons_dict)
 	# year_selected = st.sidebar.write('You selected:', year)
 	options = st.sidebar.selectbox("Pick Player", options=player_list)
 	# player = st.sidebar.write('You selected:', options)
@@ -26,16 +25,32 @@ def side_bar():
 		if p['name'] == options:
 			player_id = p['id']
 
-	opponent = st.sidebar.selectbox("Pick Opponent", options=teams_dict)
-# 	agree = st.sidebar.checkbox("Compare Seasons")
-# 	if agree:
-# 		st.checkbox("Great", value=True)
-	if player_id and opponent:
-		player_image = get_player_image(player_id)
-		col1, col2 = st.beta_columns([3,1])
-		col1.subheader(f'{options} - Shot Analysis vs {opponent}')
-		col2.image(player_image, width=100)
+	# opponent = st.sidebar.selectbox("Pick Opponent", options=teams_dict)
 
+
+	# compare_seasons = st.sidebar.checkbox("Compare Seasons")
+	year2 = None
+	player2 = None
+	opponent = None
+	# if compare_seasons:
+	# 	year2 = st.sidebar.selectbox("Pick Year2",
+	# 	                            options=seasons_dict)
+
+	make_comparisons = st.sidebar.checkbox("Make Comparisons")
+	if make_comparisons:
+		comp = st.sidebar.radio("",('Compare Seasons', 'Compare Players', 'Opponent'))
+		if comp == 'Compare Seasons':
+			year2 = st.sidebar.selectbox("Pick Season",
+		                            options=seasons_dict)
+		elif comp == 'Compare Players':
+			player2 = st.sidebar.selectbox("Pick Player2", options=player_list)
+
+		else:
+			opponent = st.sidebar.selectbox("Pick Opponent", options=teams_dict)
+
+
+	if player_id and opponent:
+		#fig one
 		jsn = get_shot_data(player_id, year)
 		df, data = clean_data(jsn, opponent=opponent)
 		clean_df = df.copy()
@@ -44,15 +59,49 @@ def side_bar():
 		              'GAME_DATE', 'HTM', 'VTM'], axis=1, inplace=True)
 		fig = build_court(data, options, year)
 		# fig.show()
-		st.plotly_chart(fig)
-		player_year_stats(clean_df)
+
+		# fig two
+		if year2:
+			jsn = get_shot_data(player_id, year2)
+			df, data = clean_data(jsn, opponent=opponent)
+			clean_df2 = df.copy()
+			clean_df2.drop(
+				['GRID_TYPE', 'GAME_ID', 'GAME_EVENT_ID', 'PLAYER_ID', 'PLAYER_NAME', 'TEAM_ID', 'TEAM_NAME', 'PERIOD',
+				 'MINUTES_REMAINING', 'SECONDS_REMAINING', 'LOC_X', 'LOC_Y', 'SHOT_MADE_FLAG',
+				 'GAME_DATE', 'HTM', 'VTM'], axis=1, inplace=True)
+			fig2 = build_court(data, options, year2)
+			# fig.show()
+
+		elif player2:
+			for p in player_dict:
+				# st.sidebar.write('Player:', p['name'], player)
+				if p['name'] == player2:
+					player_id2 = p['id']
+			jsn = get_shot_data(player_id2, year)
+			df, data = clean_data(jsn, opponent=opponent)
+			clean_df2 = df.copy()
+			clean_df2.drop(
+				['GRID_TYPE', 'GAME_ID', 'GAME_EVENT_ID', 'PLAYER_ID', 'PLAYER_NAME', 'TEAM_ID', 'TEAM_NAME', 'PERIOD',
+				 'MINUTES_REMAINING', 'SECONDS_REMAINING', 'LOC_X', 'LOC_Y', 'SHOT_MADE_FLAG',
+				 'GAME_DATE', 'HTM', 'VTM'], axis=1, inplace=True)
+			fig2 = build_court(data, player2, year)
+
+
+		if year2:
+			plot1, plot2 = st.beta_columns(2)
+			plot1.plotly_chart(fig)
+			plot2.plotly_chart(fig2)
+			st.write(f"{year} stats")
+			player_year_stats(clean_df)
+			st.write(f"{year2} stats")
+			player_year_stats(clean_df2)
+		else:
+			st.plotly_chart(fig)
+			player_year_stats(clean_df)
+
 		st.sidebar.write('Player ID:', player_id)
 	elif player_id and not opponent:
-		player_image = get_player_image(player_id)
-		col1, col2 = st.beta_columns([3, 1])
-		col1.title(f'{options} - Shot Analysis')
-		col2.image(player_image, width=100)
-		get_player_image(player_id)
+		# plot 1
 		jsn = get_shot_data(player_id, year)
 		df, data = clean_data(jsn)
 		clean_df = df.copy()
@@ -62,12 +111,76 @@ def side_bar():
 			 'GAME_DATE', 'HTM', 'VTM'], axis=1, inplace=True)
 		fig = build_court(data, options, year)
 		# fig.show()
-		st.plotly_chart(fig)
-		player_year_stats(clean_df)
+
+		if year2:
+			#plot 2
+			jsn = get_shot_data(player_id, year2)
+			df, data = clean_data(jsn)
+			clean_df2 = df.copy()
+			clean_df2.drop(
+				['GRID_TYPE', 'GAME_ID', 'GAME_EVENT_ID', 'PLAYER_ID', 'PLAYER_NAME', 'TEAM_ID', 'TEAM_NAME', 'PERIOD',
+				 'MINUTES_REMAINING', 'SECONDS_REMAINING', 'LOC_X', 'LOC_Y', 'SHOT_MADE_FLAG',
+				 'GAME_DATE', 'HTM', 'VTM'], axis=1, inplace=True)
+			fig2 = build_court(data, options, year2)
+			# fig.show()
+
+		elif player2:
+			#plot 2
+			for p in player_dict:
+				# st.sidebar.write('Player:', p['name'], player)
+				if p['name'] == player2:
+					player_id2 = p['id']
+			jsn = get_shot_data(player_id2, year)
+			df, data = clean_data(jsn)
+			clean_df2 = df.copy()
+			clean_df2.drop(
+				['GRID_TYPE', 'GAME_ID', 'GAME_EVENT_ID', 'PLAYER_ID', 'PLAYER_NAME', 'TEAM_ID', 'TEAM_NAME', 'PERIOD',
+				 'MINUTES_REMAINING', 'SECONDS_REMAINING', 'LOC_X', 'LOC_Y', 'SHOT_MADE_FLAG',
+				 'GAME_DATE', 'HTM', 'VTM'], axis=1, inplace=True)
+			fig2 = build_court(data, player2, year)
+			# fig.show()
+
+
+		if year2 or player2:
+			if year2:
+				player_image = get_player_image(player_id)
+				col1, col2 = st.beta_columns([3, 1])
+				col1.header(f'{options} - Shot Analysis')
+				col2.image(player_image, width=100)
+			else:
+				player_image = get_player_image(player_id)
+				player_image2 = get_player_image(player_id2)
+				col1, col2, col3, col4, col5, col6, col7 = st.beta_columns(7)
+				col3.image(player_image, width=100)
+				col4.header(f'{options} vs {player2}')
+				col5.image(player_image2, width=100)
+
+			plot1, plot2 = st.beta_columns(2)
+			plot1.plotly_chart(fig)
+			plot2.plotly_chart(fig2)
+			if player2:
+				st.subheader(f"{options} stats")
+				player_year_stats(clean_df)
+				st.subheader(f"{player2} stats")
+				player_year_stats(clean_df2)
+			else:
+				st.subheader(f"{year} stats")
+				player_year_stats(clean_df)
+				st.subheader(f"{year2} stats")
+				player_year_stats(clean_df2)
+		else:
+			player_image = get_player_image(player_id)
+			cols1, cols2, cols3, cols4= st.beta_columns(4)
+			cols1.header(f'{options} - Shot Analysis')
+			cols2.image(player_image, width=100)
+			st.plotly_chart(fig)
+			player_year_stats(clean_df)
 		st.sidebar.write('Player ID:', player_id)
+		# if player2:
+
 	else:
-		st.sidebar.write("Didn't work")
-		build_court_empty()
+		st.sidebar.write("Choose new data")
+		st.plotly_chart(build_court_empty())
 
 	run_button = st.sidebar.button(label='Get Stats')
 
@@ -75,7 +188,7 @@ def side_bar():
 def build_court(data, player, year):
 	layout = go.Layout(
 		title=f"{player} Shot chart {year}",
-		showlegend=True,
+		showlegend=False,
 		xaxis={'showgrid': False, 'range': [-300, 300]},
 		yaxis={'showgrid': False, 'range': [-100, 500]},
 		height=600,
@@ -100,6 +213,8 @@ def build_court(data, player, year):
 			# ),
 		]
 	)
+	fig.update_yaxes(visible=False)
+	fig.update_xaxes(visible=False)
 
 	# Rim
 	fig.add_shape(type="circle",
@@ -171,55 +286,100 @@ def build_court(data, player, year):
 
 def build_court_empty():
 	layout = go.Layout(
-		title="No data for this player in this year",
-		showlegend=True,
+		title=f"Choose data from the sidebar",
+		showlegend=False,
 		xaxis={'showgrid': False, 'range': [-300, 300]},
 		yaxis={'showgrid': False, 'range': [-100, 500]},
 		height=600,
 		width=650,
 	)
-	color="white"
-	width=1
+	color = "white"
+	width = 1
 	fig = go.Figure(layout=layout)
+	fig.update_layout(
+		shapes=[
+			# Quadratic Bezier Curves
+			dict(
+				type="path",
+				path="M -210 110 Q 0 380 210 110",
+				line=dict(color=color, width=width),
+			),
+			# Restricted Area
+			# dict(
+			# 	type="path",
+			# 	path="M -20 0 Q 0 30 20 0",
+			# 	line=dict(color=color, width=width),
+			# ),
+		]
+	)
+	fig.update_yaxes(visible=False)
+	fig.update_xaxes(visible=False)
+
 	# Rim
 	fig.add_shape(type="circle",
-				xref="x", yref="y",
-				x0=-6, y0=-6, x1=6, y1=6,
-				line=dict(color=color, width=width),
-				)
+	              xref="x", yref="y",
+	              x0=-6, y0=-6, x1=6, y1=6,
+	              line=dict(color=color, width=width),
+	              )
 	# Backboard
 	fig.add_shape(type="rect",
-				x0=-15, y0=-7, x1=15, y1=-7,
-				line=dict(color=color, width=width),
-				)
+	              x0=-15, y0=-7, x1=15, y1=-7,
+	              line=dict(color=color, width=width),
+	              )
 	# outer box
 	fig.add_shape(type="rect",
-				x0=-80, y0=160, x1=80, y1=-47.5,
-				line=dict(color=color, width=width),
-				)
+	              x0=-80, y0=160, x1=80, y1=-47.5,
+	              line=dict(color=color, width=width),
+	              )
 	# inner box
 	fig.add_shape(type="rect",
-				x0=-60, y0=160, x1=60, y1=-47.5,
-				line=dict(color=color, width=width),
-				)
+	              x0=-60, y0=160, x1=60, y1=-47.5,
+	              line=dict(color=color, width=width),
+	              )
 	# left arc
 	fig.add_shape(type="rect",
-				x0=-210, y0=130, x1=-210, y1=-47.5,
-				line=dict(color=color, width=width),
-				)
+	              x0=-210, y0=110, x1=-210, y1=-47.5,
+	              line=dict(color=color, width=width),
+	              )
 	# right arc
 	fig.add_shape(type="rect",
-				x0=210, y0=130, x1=210, y1=-47.5,
-				line=dict(color=color, width=width),
-				)
+	              x0=210, y0=110, x1=210, y1=-47.5,
+	              line=dict(color=color, width=width),
+	              )
 
 	# midrange circle
 	fig.add_shape(type="circle",
-				xref="x", yref="y",
-				x0=-60, y0=95, x1=60, y1=220,
-				line=dict(color=color, width=width),
-				)
-
+	              xref="x", yref="y",
+	              x0=-60, y0=95, x1=60, y1=220,
+	              line=dict(color=color, width=width),
+	              )
+	# center court circle outer
+	fig.add_shape(type="circle",
+	              xref="x", yref="y",
+	              x0=-60, y0=400, x1=60, y1=530,
+	              line=dict(color=color, width=width),
+	              )
+	# center court circle inner
+	fig.add_shape(type="circle",
+	              xref="x", yref="y",
+	              x0=-30, y0=430, x1=30, y1=500,
+	              line=dict(color=color, width=width),
+	              )
+	# court surroundings upper
+	fig.add_shape(type="rect",
+	              x0=-250, y0=-47.5, x1=250, y1=465,
+	              line=dict(color=color, width=width),
+	              )
+	# court surroundings lower
+	fig.add_shape(type="rect",
+	              x0=-250, y0=465, x1=250, y1=987.5,
+	              line=dict(color=color, width=width),
+	              )
+	# # halfcourt line
+	# fig.add_shape(type="rect",
+	#               x0=-250, y0=500, x1=250, y1=500,
+	#               line=dict(color=color, width=width),
+	#               )
 
 	return fig
 
@@ -227,9 +387,9 @@ def player_year_stats(df):
 	if df.empty:
 		st.write("No data to display for this player in this season")
 	else:
-		st.write(df)
-		col1, col2 = st.beta_columns(2)
-		col3, col4 = st.beta_columns(2)
+		# st.write(df)
+		col1, col2, col3, col4 = st.beta_columns(4)
+ # = st.beta_columns(2)
 		# col3.write(df['SHOT_DISTANCE'].describe())
 		col1.write(df['SHOT_ZONE_AREA'].value_counts(normalize=True)*100)
 		col2.write(df['SHOT_ZONE_RANGE'].value_counts(normalize=True)*100)
@@ -341,5 +501,8 @@ def main():
 
 
 if __name__ == '__main__':
-	# st.set_page_config(layout="wide")
+	st.set_page_config(layout="wide",
+	                   page_icon=None,
+	                   )
+
 	main()
