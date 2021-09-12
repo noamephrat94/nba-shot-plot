@@ -144,9 +144,9 @@ def side_bar():
 		if year2 or player2:
 			if year2:
 				player_image = get_player_image(player_id)
-				col1, col2 = st.beta_columns([3, 1])
-				col1.header(f'{options} - Shot Analysis')
-				col2.image(player_image, width=100)
+				cols1, cols2 = st.beta_columns([3, 1])
+				cols1.header(f'{options} - Shot Analysis')
+				cols2.image(player_image, width=100)
 			else:
 				player_image = get_player_image(player_id)
 				player_image2 = get_player_image(player_id2)
@@ -506,3 +506,4 @@ if __name__ == '__main__':
 	                   )
 
 	main()
+
