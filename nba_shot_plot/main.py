@@ -27,9 +27,9 @@ def side_bar():
 			player_id = p['id']
 
 	opponent = st.sidebar.selectbox("Pick Opponent", options=teams_dict)
-	agree = st.sidebar.checkbox("Compare Seasons")
-	if agree:
-		st.checkbox("Great", value=True)
+# 	agree = st.sidebar.checkbox("Compare Seasons")
+# 	if agree:
+# 		st.checkbox("Great", value=True)
 	if player_id and opponent:
 		player_image = get_player_image(player_id)
 		col1, col2 = st.beta_columns([3,1])
