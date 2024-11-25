@@ -16,3 +16,4 @@ plotly==5.1.0
 scipy==1.7.1
 seaborn==0.11.1
 streamlit==0.85.1
+protobuf==3.20.*
